@@ -1,0 +1,8 @@
+# Abaikan folder bin dan isinya
+bin/
+*.xlsx
+*.xls
+*.env
+
+# Abaikan file binary (jika di luar bin)
+report_export_excel*
