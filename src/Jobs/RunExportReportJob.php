@@ -15,7 +15,11 @@ use Illuminate\Foundation\Bus\Dispatchable; // <== ini penting
 
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use ZipArchive;
+
 
 class RunExportReportJob implements ShouldQueue
 {
@@ -74,6 +78,81 @@ class RunExportReportJob implements ShouldQueue
 
             Log::info("Export success jobId::".$jobId , ['output' => $process->getOutput()]);
 
+
+            $log = DB::table('report_log')
+                ->where('job_id', $jobId)
+                ->where('status', 'success')
+                ->orderByDesc('created_at')
+                ->first();
+
+            if (!$log) {
+                Log::warning("Tidak ada log untuk job_id $jobId");
+                return;
+            }
+
+            // Path asli file hasil Go
+            $fullPath = storage_path($log->file_name);
+            if (!file_exists($fullPath)) {
+                Log::warning("File tidak ditemukan: $fullPath");
+                return;
+            }
+
+            // Buat file ZIP
+            $zipName = 'report_' . Str::random(8) . '.zip';
+            $zipPath = storage_path("app/public/tmp_zipped/{$zipName}");
+            $oldUmask = umask(0002); // 👈 izin default: 775
+
+            $path = storage_path('app/public/tmp_zipped');
+            if (!file_exists($path)) {
+                mkdir($path, 0775, true); // 0775 = rwxrwxr-x
+                chmod($path, 0775);       // Pastikan izin folder sesuai
+            }
+
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
+                $zip->addFile($fullPath, basename($log->file_name)); // nama di dalam zip
+                $zip->close();
+
+                // set permission langsung
+                chmod($zipPath, 0775);
+            } else {
+                Log::error("Gagal membuat ZIP untuk file $fullPath");
+                return;
+            }
+
+            umask($oldUmask); // kembalikan ke umask awal
+
+            // Cek ukuran file
+            $fileSize = filesize($zipPath);
+            $maxSize = 8 * 1024 * 1024; // 8 MB
+
+            if ($fileSize > $maxSize) {
+                // Jika file terlalu besar, kirim link download
+                $publicUrl = asset("storage/tmp_zipped/{$zipName}");
+
+                // Mail::raw("Report is ready. download:\n\n$publicUrl", function ($message) {
+                //     $message->to($this->email)
+                //             ->subject('Your Report is Ready');
+                // });
+                Mail::html("Report is ready. <br><br><a href=\"$publicUrl\">download</a>", function ($message) {
+                    $message->to($this->email)
+                            ->subject('Your Report is Ready');
+                });
+
+                Log::info("📩 Email dikirim dengan link karena ZIP > 8MB", ['link' => $publicUrl]);
+            } else {
+                // Jika ukuran cukup, attach ZIP
+                Mail::raw('Report is ready. File attach.', function ($message) use ($zipPath) {
+                    $message->to($this->email)
+                            ->subject('Your Report')
+                            ->attach($zipPath);
+                });
+
+                Log::info("📩 Email dikirim dengan attachment ZIP", ['file' => $zipPath]);
+            }
+
+
+            /*
             // $date = now()->format('ymd');
             // $filename = "report_{$this->reportId}.xlsx";
             // $filePath = base_path("go_reports/output/{$date}/{$filename}");
@@ -104,6 +183,9 @@ class RunExportReportJob implements ShouldQueue
             } else {
                 Log::warning("Report file:: ".$path_file." (".file_exists($path_file).") not found for job_id: $jobId");
             }
+
+
+            */
 
         } catch (ProcessFailedException $e) {
             Log::error("Export failed", ['error' => $e->getMessage()]);
