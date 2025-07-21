@@ -191,4 +191,13 @@ class RunExportReportJob implements ShouldQueue
             Log::error("Export failed", ['error' => $e->getMessage()]);
         }
     }
+
+    public function getParams()
+    {
+        return $this->params;
+    }
+    public function getJobId()
+    {
+        return $this->params['job_id'] ?? null;
+    }
 }
