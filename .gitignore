@@ -1,8 +1,13 @@
-# Abaikan folder bin dan isinya
-bin/
-*.xlsx
-*.xls
-*.env
+# Ignore .env file (local config)
+bin/.env
 
-# Abaikan file binary (jika di luar bin)
-report_export_excel*
+# Ignore template Excel (contoh saja, bukan dibutuhkan di produksi)
+bin/template/
+bin/*.xlsx
+bin/*.xls
+
+# Optional: ignore build artifacts selain yang kita pilih
+# Abaikan semua binary kecuali yg di-allow eksplisit
+bin/*
+!bin/report_export_excel
+!bin/report_export_excel_UBUNTU
