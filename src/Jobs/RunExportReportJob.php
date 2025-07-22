@@ -91,14 +91,24 @@ class RunExportReportJob implements ShouldQueue
             }
 
             // Path asli file hasil Go
-            $fullPath = storage_path($log->file_name);
-            if (!file_exists($fullPath)) {
-                Log::warning("File tidak ditemukan: $fullPath");
+            $relativePath = ltrim(preg_replace('#^storage/?#', '', $log->file_name), '/');
+            $fullPath = storage_path($relativePath);
+            // if (!file_exists($fullPath)) {
+            //     Log::warning("File tidak ditemukan: $fullPath");
+            //     return;
+            // }
+
+            $realPath = realpath($fullPath);
+
+            if (!$realPath || !file_exists($fullPath)) {
+                Log::warning("File tidak ditemukan (realpath): $fullPath");
                 return;
             }
 
             // Buat file ZIP
-            $zipName = 'report_' . Str::random(8) . '.zip';
+            // $zipName = 'report_' . Str::random(8) . '.zip';
+            $zipName = 'report_' . Str::slug($log->report_name) . '_' . date('Ymd_His') . '.zip';
+
             $zipPath = storage_path("app/public/tmp_zipped/{$zipName}");
             $oldUmask = umask(0002); // 👈 izin default: 775
 
@@ -122,6 +132,11 @@ class RunExportReportJob implements ShouldQueue
 
             umask($oldUmask); // kembalikan ke umask awal
 
+
+            SendReportEmailJob::dispatch($this->email, $zipPath)->afterResponse();
+
+
+            /*
             // Cek ukuran file
             $fileSize = filesize($zipPath);
             $maxSize = 8 * 1024 * 1024; // 8 MB
@@ -150,6 +165,9 @@ class RunExportReportJob implements ShouldQueue
 
                 Log::info("📩 Email dikirim dengan attachment ZIP", ['file' => $zipPath]);
             }
+            */
+
+
 
 
             /*
