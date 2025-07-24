@@ -47,17 +47,17 @@ class SendReportEmailJob implements ShouldQueue
             $publicPath = 'storage/tmp_zipped/' . basename($this->reportPath);
             $url = asset($publicPath);
 
-            Mail::html("Report Anda telah selesai. Silakan unduh:<br><br><a href=\"$url\">Klik di sini</a>", function ($message) {
+            Mail::html("Your report is ready. Please download it:<br><br><a href=\"$url\">Click here</a>", function ($message) {
                 $message->to($this->email)
-                        ->subject('Report Anda Siap');
+                        ->subject('Your Report is Ready');
             });
 
             Log::info("📩 Email link dikirim ke {$this->email}", ['url' => $url]);
         } else {
             // Kirim sebagai lampiran
-            Mail::raw("Report Anda siap. Silakan lihat lampiran.", function ($message) {
+            Mail::raw("Your report is ready. Please download the attachment.", function ($message) {
                 $message->to($this->email)
-                        ->subject('Report Anda Siap')
+                        ->subject('Your Report is Ready')
                         ->attach($this->reportPath);
             });
 
