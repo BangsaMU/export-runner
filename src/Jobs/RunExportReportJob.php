@@ -68,6 +68,10 @@ class RunExportReportJob implements ShouldQueue
             'DB_NAME' => env('DB_DATABASE'),
         ];
 
+        if(config('app.debug')==true){
+            Log::info("env: ".json_encode($env));
+        }
+
         $process = new Process($args, base_path(), $env);
 
         // $process = new Process($args);
