@@ -60,12 +60,14 @@ class RunExportReportJob implements ShouldQueue
         }
 
         // Inject ENV ke proses Go
+        $db = config('database.connections.mysql');
+
         $env = [
-            'DB_HOST' => env('DB_HOST'),
-            'DB_PORT' => env('DB_PORT'),
-            'DB_USER' => env('DB_USERNAME'),
-            'DB_PASS' => env('DB_PASSWORD'),
-            'DB_NAME' => env('DB_DATABASE'),
+            'DB_HOST' => $db['host'],
+            'DB_PORT' => $db['port'],
+            'DB_USER' => $db['username'],
+            'DB_PASS' => $db['password'],
+            'DB_NAME' => $db['database'],
         ];
 
         if(config('app.debug')==true){
